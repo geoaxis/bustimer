@@ -15,9 +15,10 @@ import logging
 import os
 import sys
 
-from PyQt6.QtCore import QUrl, QObject, pyqtSlot, Qt
+from PyQt6.QtCore import QUrl, QObject, QTimer, pyqtSlot, Qt
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtQml import QQmlApplicationEngine
+from PyQt6.QtQuick import QQuickWindow
 
 from bus_model import BusModel
 from data_fetcher import DataFetcher
@@ -71,6 +72,19 @@ def main():
     fetcher.alertChanged.connect(bridge.setAlert, Qt.ConnectionType.QueuedConnection)
     fetcher.statusChanged.connect(bridge.setStatus, Qt.ConnectionType.QueuedConnection)
     fetcher.start()
+
+    # One-shot screenshot 5s after startup (enough time for first data fetch)
+    screenshot_path = os.environ.get("BUSTIMER_SCREENSHOT")
+    if screenshot_path:
+        def _grab():
+            try:
+                win = engine.rootObjects()[0]
+                img = win.grabWindow()
+                img.save(screenshot_path)
+                log.info("Screenshot saved to %s", screenshot_path)
+            except Exception as e:
+                log.warning("Screenshot failed: %s", e)
+        QTimer.singleShot(5000, _grab)
 
     log.info("BusTimer started — window 800×480")
     ret = app.exec()

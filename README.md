@@ -4,35 +4,50 @@ A fullscreen transit display for Raspberry Pi 3 (800×480).
 
 Answers one question: **"If I take this bus, which train can I catch — and when do I arrive?"**
 
+![BusTimer running on Raspberry Pi](screenshot.png)
+
 Shows the next two buses from **Slåttervägen** toward **Jakobsberg / Barkarby** station, each paired with its connecting pendeltåg to Stockholm C, with estimated arrival time and minutes to spare for the change.
 
 ---
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                     main.py (GUI thread)                │
-│                                                         │
-│  QGuiApplication                                        │
-│       │                                                 │
-│       ├── QQmlApplicationEngine                         │
-│       │        └── bustimer.qml  ←── busModel (roles)  │
-│       │                                                 │
-│       └── DataFetcher (QThread) ──────────────────────┐ │
-│                │  rowsReady signal (queued)            │ │
-│                │  alertChanged / statusChanged         │ │
-│                ▼                                       │ │
-│           BusModel  ◄──────────────────────────────────┘ │
-│      (QAbstractListModel)                               │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    ENV["/etc/bustimer.env\nAPI key · stop IDs · timings"]:::env
 
-External APIs (polled from DataFetcher thread):
+    subgraph pi["Raspberry Pi 3"]
+        subgraph gui["GUI Thread"]
+            MAIN["main.py\nQGuiApplication"]
+            QML["bustimer.qml\n800×480 dark UI"]
+            MODEL["bus_model.py\nQAbstractListModel"]
+            MAIN --> QML
+            QML <-->|"roles"| MODEL
+        end
 
-  SL Transport API ──► bus departures from Slåttervägen  (every 30s)
-  SL Transport API ──► train departures from Jakobsberg  (every 30s)
-                       train departures from Barkarby
-  SL Deviations API ──► service alerts                   (every 60s)
+        subgraph worker["DataFetcher — QThread"]
+            FETCH["data_fetcher.py\npoll · match · emit"]
+        end
+
+        FETCH -->|"rowsReady signal\n(queued)"| MODEL
+        FETCH -->|"alertChanged\nstatusChanged"| MAIN
+        ENV -->|"os.environ"| FETCH
+    end
+
+    subgraph apis["External APIs"]
+        SLT["SL Transport API\ntransport.integration.sl.se\nevery 30s · no key"]
+        SLD["SL Deviations API\ndeviations.integration.sl.se\nevery 60s · no key"]
+        TFL["Trafiklab Stop Lookup\nrealtime-api.trafiklab.se\nstartup only · needs key"]
+    end
+
+    FETCH -->|"bus departures\ntrain departures"| SLT
+    FETCH -->|"service alerts"| SLD
+    FETCH -->|"resolve stop IDs"| TFL
+
+    QML -->|"eglfs/KMS"| SCREEN["HDMI Display\n800×480"]
+
+    classDef env fill:#1f2937,stroke:#8b949e,color:#8b949e
+    classDef default fill:#1f2937,stroke:#30363d,color:#e6edf3
 ```
 
 ### Files
