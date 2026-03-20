@@ -1,0 +1,13 @@
+# Environment files (contain API keys)
+bustimer.env
+*.env
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor
+.DS_Store
+
+# Claude Code
+.claude/

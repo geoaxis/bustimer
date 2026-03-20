@@ -1,0 +1,28 @@
+[Unit]
+Description=BusTimer — bus/train connection display
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Run as pi user (adjust if your username differs)
+User=hatim
+Group=hatim
+
+WorkingDirectory=/home/hatim/bustimer
+
+# Load display environment variables
+EnvironmentFile=/etc/bustimer.env
+
+ExecStart=/usr/bin/python3 /home/hatim/bustimer/main.py
+
+# Restart on failure, quickly
+Restart=always
+RestartSec=1s
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bustimer
+
+[Install]
+WantedBy=multi-user.target

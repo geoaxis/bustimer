@@ -1,0 +1,8 @@
+# BusTimer dependencies
+# Install: pip install -r requirements.txt
+#
+# On Raspberry Pi OS (Bookworm) you may prefer the system package:
+#   sudo apt install python3-pyqt6 python3-pyqt6.qtquick
+# which avoids building from source on armhf.
+
+PyQt6>=6.4.0
